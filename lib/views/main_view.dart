@@ -10,8 +10,8 @@ class MainView extends StatefulWidget {
 }
 
 class _MainViewState extends State<MainView> {
-  final int columns = 10;
-  final int rows = 10;
+  final int columns = 5;
+  final int rows = 5;
   final tileSize = 50.0;
   final spacing = 20.0;
 
@@ -30,9 +30,11 @@ class _MainViewState extends State<MainView> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Stack(
-        children: _getTiles(),
+    return Scaffold(
+      body: Center(
+        child: Stack(
+          children: _getTiles(),
+        ),
       ),
     );
   }
@@ -68,42 +70,42 @@ class _MainViewState extends State<MainView> {
                 }
               },
               onNewSlideDirection: (direction) {
-                try {
-                  String? key;
+                //   try {
+                //     String? key;
 
-                  switch (direction) {
-                    case Direction.up:
-                      key = '${col - 1},$row';
-                      break;
-                    case Direction.down:
-                      key = '${col + 1},$row';
-                      break;
-                    case Direction.left:
-                      key = '$col,${row - 1}';
-                      break;
-                    case Direction.right:
-                      key = '$col,${row + 1}';
-                      break;
-                    case null:
-                      for (final element in newTiles) {
-                        (element.child as Tile).setSlideDirection(direction);
-                      }
-                      break;
-                  }
-                  if (key?.isNotEmpty ?? false) {
-                    final slideTargetKey = ValueKey(key!);
-                    final slideSenderKey = ValueKey('$col,$row');
+                //     switch (direction) {
+                //       case Direction.up:
+                //         key = '${col - 1},$row';
+                //         break;
+                //       case Direction.down:
+                //         key = '${col + 1},$row';
+                //         break;
+                //       case Direction.left:
+                //         key = '$col,${row - 1}';
+                //         break;
+                //       case Direction.right:
+                //         key = '$col,${row + 1}';
+                //         break;
+                //       case null:
+                //         for (final element in newTiles) {
+                //           (element.child as Tile).setSlideDirection(direction);
+                //         }
+                //         break;
+                //     }
+                //     if (key?.isNotEmpty ?? false) {
+                //       final slideTargetKey = ValueKey(key!);
+                //       final slideSenderKey = ValueKey('$col,$row');
 
-                    for (final element in newTiles) {
-                      if (element.key == slideTargetKey) {
-                        (element.child as Tile)
-                            .setSlideDirection(direction?.opposite());
-                      } else if (element.key != slideSenderKey) {
-                        (element.child as Tile).setSlideDirection(null);
-                      }
-                    }
-                  }
-                } catch (_) {}
+                //       for (final element in newTiles) {
+                //         if (element.key == slideTargetKey) {
+                //           (element.child as Tile)
+                //               .setSlideDirection(direction?.opposite());
+                //         } else if (element.key != slideSenderKey) {
+                //           (element.child as Tile).setSlideDirection(null);
+                //         }
+                //       }
+                //     }
+                //   } catch (_) {}
               },
             ),
           ),
@@ -113,8 +115,6 @@ class _MainViewState extends State<MainView> {
     return newTiles;
   }
 
-  // double _getTopAnchorForColumn(int col) => ((col + 1) * 12.5) + (col * 62.5);
-  // double _getleftAnchorForRow(int row) => (row + 1) * 12.5 + (row * 62.5);
   double _getTopAnchorForColumn(int col) =>
       spacing + (col * (tileSize + spacing));
   double _getleftAnchorForRow(int row) =>

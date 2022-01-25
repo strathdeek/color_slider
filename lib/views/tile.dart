@@ -1,24 +1,19 @@
 import 'package:flutter/material.dart';
 
 class Tile extends StatefulWidget {
-  Tile(
-      {Key? key,
-      required this.color,
-      this.height = 50,
-      this.width = 50,
-      this.padding = 25,
-      required this.getColorForDirection,
-      required this.onNewSlideDirection})
-      : super(key: key);
-
-  void setSlideDirection(Direction? direction) {
-    _tileState.setSlideDirection(direction);
-  }
+  const Tile({
+    Key? key,
+    required this.color,
+    this.height = 50,
+    this.width = 50,
+    this.padding = 25,
+    required this.getColorForDirection,
+    required this.onNewSlideDirection,
+  }) : super(key: key);
 
   @override
-  State<Tile> createState() => _tileState;
+  State<Tile> createState() => _TileState();
 
-  final _TileState _tileState = _TileState();
   final Color color;
   final double height;
   final double width;
@@ -29,9 +24,32 @@ class Tile extends StatefulWidget {
 
 class _TileState extends State<Tile> {
   Direction? slideDirection;
-  static double cornerRadius = 10;
-  static int animationTimeInMS = 150;
+  static double cornerRadiusResting = 15;
+  static double stretchDistance = 10;
+  static Duration animationDuration = const Duration(milliseconds: 300);
   static Curve animationCurve = Curves.ease;
+  static double gradientStart = .7;
+  static double gradientStop = 1;
+
+  late double tileHeight;
+  late double tileWidth;
+  double? tileTop;
+  double? tileLeft;
+  double? tileBottom;
+  double? tileRight;
+  late BorderRadius tileRadius;
+  late LinearGradient tileGradient;
+
+  @override
+  void initState() {
+    tileHeight = _getTileHeight();
+    tileWidth = _getTileWidth();
+    tileTop = _getTileTop();
+    tileLeft = _getTileLeft();
+    tileRadius = _getBorderRadius();
+    tileGradient = _getTileGradient();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,31 +57,27 @@ class _TileState extends State<Tile> {
       height: widget.height + widget.padding * 2,
       width: widget.width + widget.padding * 2,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           AnimatedPositioned(
-            height: _getShadowHeight(),
-            width: _getShadowWidth(),
-            duration: Duration(milliseconds: animationTimeInMS),
-            top: _getShadowTopAnchor(),
-            left: _getShadowLeftAnchor(),
+            duration: animationDuration,
+            top: tileTop,
+            left: tileLeft,
+            right: tileRight,
+            bottom: tileBottom,
             curve: animationCurve,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: _getShadowGradient(),
-              ),
-            ),
-          ),
-          Center(
             child: GestureDetector(
+              onPanCancel: _onPanCancel,
               onPanUpdate: _onPanUpdate,
+              onPanEnd: (details) => _moveTile(slideDirection),
               child: AnimatedContainer(
+                duration: animationDuration,
                 curve: animationCurve,
-                duration: Duration(milliseconds: animationTimeInMS),
-                height: widget.height,
-                width: widget.width,
+                height: tileHeight,
+                width: tileWidth,
                 decoration: BoxDecoration(
-                  color: widget.color,
-                  borderRadius: _getBorderRadius(),
+                  borderRadius: tileRadius,
+                  gradient: tileGradient,
                 ),
               ),
             ),
@@ -71,12 +85,6 @@ class _TileState extends State<Tile> {
         ],
       ),
     );
-  }
-
-  void setSlideDirection(Direction? direction) {
-    setState(() {
-      slideDirection = direction;
-    });
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
@@ -95,10 +103,63 @@ class _TileState extends State<Tile> {
     }
 
     if (newDirection != slideDirection) {
-      setState(() {
-        slideDirection = newDirection;
-      });
-      widget.onNewSlideDirection(newDirection);
+      _setTileDirection(newDirection);
+    }
+  }
+
+  void _onPanCancel() => _setTileDirection(null);
+
+  void _setTileDirection(Direction? direction) {
+    setState(() {
+      slideDirection = direction;
+      tileHeight = _getTileHeight();
+      tileWidth = _getTileWidth();
+      tileTop = _getTileTop();
+      tileLeft = _getTileLeft();
+      tileRadius = _getBorderRadius();
+      tileGradient = _getTileGradient();
+    });
+  }
+
+  void _setTilePosition({double? l, double? t, double? r, double? b}) {
+    setState(() {
+      tileTop = t;
+      tileLeft = l;
+      tileBottom = b;
+      tileRight = r;
+      slideDirection = null;
+      tileHeight = _getTileHeight();
+      tileWidth = _getTileWidth();
+      tileRadius = _getBorderRadius();
+      tileGradient = _getTileGradient();
+    });
+  }
+
+  void _moveTile(Direction? direction) {
+    switch (direction) {
+      case Direction.left:
+        _setTilePosition(l: -widget.width, t: widget.padding);
+        break;
+      case Direction.right:
+        _setTilePosition(
+          l: (widget.padding * 2) + widget.width,
+          t: widget.padding,
+        );
+        break;
+      case Direction.up:
+        _setTilePosition(
+          l: widget.padding,
+          t: -widget.height,
+        );
+        break;
+      case Direction.down:
+        _setTilePosition(
+          l: widget.padding,
+          t: widget.height + (widget.padding * 2),
+        );
+        break;
+      case null:
+        break;
     }
   }
 
@@ -106,34 +167,37 @@ class _TileState extends State<Tile> {
     switch (slideDirection) {
       case Direction.left:
         return BorderRadius.horizontal(
-          right: Radius.circular(cornerRadius),
+          right: Radius.circular(cornerRadiusResting),
+          left: Radius.elliptical(widget.width, widget.height * .8),
         );
 
       case Direction.right:
         return BorderRadius.horizontal(
-          left: Radius.circular(cornerRadius),
+          left: Radius.circular(cornerRadiusResting),
+          right: Radius.elliptical(widget.width, widget.height * .8),
         );
       case Direction.down:
         return BorderRadius.vertical(
-          top: Radius.circular(cornerRadius),
+          top: Radius.circular(cornerRadiusResting),
+          bottom: Radius.elliptical(widget.width * .8, widget.height),
         );
       case Direction.up:
         return BorderRadius.vertical(
-          bottom: Radius.circular(cornerRadius),
+          top: Radius.elliptical(widget.width * .8, widget.height),
+          bottom: Radius.circular(cornerRadiusResting),
         );
       case null:
         return BorderRadius.all(
-          Radius.circular(cornerRadius),
+          Radius.circular(cornerRadiusResting),
         );
     }
   }
 
-  double _getShadowLeftAnchor() {
+  double _getTileLeft() {
     switch (slideDirection) {
       case Direction.left:
-        return 0;
+        return widget.padding - stretchDistance;
       case Direction.right:
-        return widget.width + widget.padding;
       case Direction.down:
       case Direction.up:
       case null:
@@ -141,12 +205,11 @@ class _TileState extends State<Tile> {
     }
   }
 
-  double _getShadowTopAnchor() {
+  double _getTileTop() {
     switch (slideDirection) {
-      case Direction.down:
-        return widget.height + widget.padding;
       case Direction.up:
-        return 0;
+        return widget.padding - stretchDistance;
+      case Direction.down:
       case Direction.left:
       case Direction.right:
       case null:
@@ -154,11 +217,11 @@ class _TileState extends State<Tile> {
     }
   }
 
-  double _getShadowWidth() {
+  double _getTileWidth() {
     switch (slideDirection) {
       case Direction.left:
       case Direction.right:
-        return widget.padding;
+        return stretchDistance + widget.width;
       case Direction.down:
       case Direction.up:
       case null:
@@ -166,11 +229,11 @@ class _TileState extends State<Tile> {
     }
   }
 
-  double _getShadowHeight() {
+  double _getTileHeight() {
     switch (slideDirection) {
       case Direction.down:
       case Direction.up:
-        return widget.padding;
+        return widget.height + stretchDistance;
       case Direction.left:
       case Direction.right:
       case null:
@@ -178,7 +241,7 @@ class _TileState extends State<Tile> {
     }
   }
 
-  LinearGradient _getShadowGradient() {
+  LinearGradient _getTileGradient() {
     switch (slideDirection) {
       case Direction.down:
         return LinearGradient(
@@ -188,6 +251,7 @@ class _TileState extends State<Tile> {
           ],
           end: Alignment.bottomCenter,
           begin: Alignment.topCenter,
+          stops: [gradientStart, gradientStop],
         );
       case Direction.up:
         return LinearGradient(
@@ -197,6 +261,7 @@ class _TileState extends State<Tile> {
           ],
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
+          stops: [gradientStart, gradientStop],
         );
       case Direction.left:
         return LinearGradient(
@@ -206,6 +271,7 @@ class _TileState extends State<Tile> {
           ],
           begin: Alignment.centerRight,
           end: Alignment.centerLeft,
+          stops: [gradientStart, gradientStop],
         );
       case Direction.right:
         return LinearGradient(
@@ -213,10 +279,11 @@ class _TileState extends State<Tile> {
             widget.color,
             widget.getColorForDirection(slideDirection!),
           ],
+          stops: [gradientStart, gradientStop],
         );
       case null:
-        return const LinearGradient(
-          colors: [Colors.transparent, Colors.transparent],
+        return LinearGradient(
+          colors: [widget.color, widget.color],
         );
     }
   }
